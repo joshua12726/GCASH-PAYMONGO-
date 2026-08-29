@@ -197,3 +197,9 @@ app.get("/api/payment-status", async (req, res) => {
 });
 
 export default app;
+app.post("/api/test", (req, res) => {
+    res.json({
+        success: true,
+        body: req.body
+    });
+});
