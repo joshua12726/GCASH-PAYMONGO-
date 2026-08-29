@@ -46,7 +46,7 @@
     window.PaymongoGcash = {
     async startCheckout(order) {
         return api(
-            "http://localhost:3000/api/gcash-checkout",
+            "https://gcash-paymongo-xi98.vercel.app/api/gcash-checkout",
             {
                 method: "POST",
                 headers: {
@@ -59,7 +59,7 @@
 
     async getStatus(id) {
         return api(
-            "http://localhost:3000/api/payment-status?id=" +
+            "https://gcash-paymongo-xi98.vercel.app/api/payment-status?id=" +
             encodeURIComponent(id),
             {
                 method: "GET"
