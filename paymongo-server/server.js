@@ -8,6 +8,7 @@ const app = express();
 
 app.use(cors({
     origin: [
+        "https://joshua12726.github.io",
         "https://intern7zsa.net",
         "http://localhost:5500"
     ],
