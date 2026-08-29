@@ -28,13 +28,19 @@ function getAuthHeader() {
 
 app.get("/api", (req, res) => {
     res.json({
-        status: "PayMongo backend is running"
+        status: "PayMongo QRPh backend is running"
     });
 });
 
-app.post("/api/gcash-checkout", async (req, res) => {
+app.post("/api/qrph-checkout", async (req, res) => {
     try {
-        const { total, amount, firstName, lastName, email } = req.body;
+        const {
+            total,
+            amount,
+            firstName,
+            lastName,
+            email
+        } = req.body;
 
         const orderTotal = Number(total || amount);
 
@@ -46,6 +52,7 @@ app.post("/api/gcash-checkout", async (req, res) => {
 
         const amountCentavos = Math.round(orderTotal * 100);
 
+        // 1. Create Payment Intent
         const intentResponse = await fetch(
             PAYMONGO_URL + "/payment_intents",
             {
@@ -59,7 +66,7 @@ app.post("/api/gcash-checkout", async (req, res) => {
                         attributes: {
                             amount: amountCentavos,
                             currency: "PHP",
-                            payment_method_allowed: ["gcash"],
+                            payment_method_allowed: ["qrph"],
                             description: "Electro Store Order"
                         }
                     }
@@ -80,6 +87,7 @@ app.post("/api/gcash-checkout", async (req, res) => {
 
         const paymentIntentId = intentData.data.id;
 
+        // 2. Create QRPh Payment Method
         const methodResponse = await fetch(
             PAYMONGO_URL + "/payment_methods",
             {
@@ -91,9 +99,10 @@ app.post("/api/gcash-checkout", async (req, res) => {
                 body: JSON.stringify({
                     data: {
                         attributes: {
-                            type: "gcash",
+                            type: "qrph",
                             billing: {
-                                name: `${firstName || ""} ${lastName || ""}`.trim(),
+                                name:
+                                    `${firstName || ""} ${lastName || ""}`.trim(),
                                 email: email || ""
                             }
                         }
@@ -108,13 +117,14 @@ app.post("/api/gcash-checkout", async (req, res) => {
             return res.status(methodResponse.status).json({
                 error:
                     methodData.errors?.[0]?.detail ||
-                    "Failed to create GCash Payment Method",
+                    "Failed to create QRPh Payment Method",
                 details: methodData
             });
         }
 
         const paymentMethodId = methodData.data.id;
 
+        // 3. Attach QRPh Payment Method
         const attachResponse = await fetch(
             PAYMONGO_URL +
             "/payment_intents/" +
@@ -144,19 +154,21 @@ app.post("/api/gcash-checkout", async (req, res) => {
             return res.status(attachResponse.status).json({
                 error:
                     attachData.errors?.[0]?.detail ||
-                    "Failed to attach GCash payment",
+                    "Failed to attach QRPh payment",
                 details: attachData
             });
         }
 
+        // 4. Return payment information
         res.json({
             success: true,
             payment_intent_id: paymentIntentId,
+            payment_method_id: paymentMethodId,
             data: attachData.data
         });
 
     } catch (error) {
-        console.error("SERVER ERROR:", error);
+        console.error("QRPH SERVER ERROR:", error);
 
         res.status(500).json({
             error: error.message
@@ -196,7 +208,6 @@ app.get("/api/payment-status", async (req, res) => {
     }
 });
 
-export default app;
 app.post("/api/test", (req, res) => {
     res.json({
         success: true,
@@ -204,33 +215,4 @@ app.post("/api/test", (req, res) => {
     });
 });
 
-app.get("/api/payment-methods-test", async (req, res) => {
-    try {
-        const response = await fetch(
-            PAYMONGO_URL + "/payment_methods",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": getAuthHeader()
-                },
-                body: JSON.stringify({
-                    data: {
-                        attributes: {
-                            type: "gcash"
-                        }
-                    }
-                })
-            }
-        );
-
-        const data = await response.json();
-        res.status(response.status).json(data);
-
-    } catch (error) {
-        res.status(500).json({
-            error: error.message
-        });
-    }
-});
-
+export default app;
